@@ -10,9 +10,16 @@
     - name: Trigger reboot via win_reboot
       ansible.windows.win_reboot:
         test_command: "Get-ADUser -Identity Administrator -Properties *"
-        reboot_timeout: 300
+        reboot_timeout: 900
         post_reboot_delay: 60
   rescue:
+    # DCs on t3.medium can take >5 min before the SSM agent re-registers;
+    # TargetNotConnected isn't retried by `until`, so wait for it first.
+    - name: Wait for SSM to reconnect after reboot
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 900
+
     - name: Verify reboot completed (aws_ssm reconnect timeout is expected)
       ansible.windows.win_powershell:
         script: |
