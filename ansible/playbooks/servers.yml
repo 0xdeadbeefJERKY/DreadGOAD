@@ -46,7 +46,9 @@
 - name: Install SQL Server Management Studio
   hosts: mssql_ssms
   roles:
-    - { role: 'dreadnode.goad.mssql_ssms', tags: 'mssql_ssms'}
+    # SSMS is a GUI client no attack path depends on; -E mssql_ssms_enabled=false
+    # skips it when its installer won't run unattended.
+    - { role: 'dreadnode.goad.mssql_ssms', tags: 'mssql_ssms', when: mssql_ssms_enabled | default(true) | bool }
 
 - name: Install SQL Server reporting
   hosts: mssql_reporting
