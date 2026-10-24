@@ -5,6 +5,12 @@
     password: "{{ local_admin_password }}"
     password_never_expires: true
     account_disabled: false
+    # admin_user (e.g. goadmin on AWS) must be a local admin so it lands in
+    # BUILTIN\Administrators after DC promotion; otherwise ad-parent_domain
+    # can't add it to Enterprise Admins ("Insufficient access rights").
+    groups:
+      - Administrators
+    groups_action: add
     state: present
 
 #- name: Create administrator home directory

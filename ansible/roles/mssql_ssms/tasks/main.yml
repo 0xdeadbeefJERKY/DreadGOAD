@@ -12,10 +12,35 @@
   register: ssms_reboot_pending
 
 - name: Reboot before SSMS install if pending
-  ansible.windows.win_reboot:
-    reboot_timeout: 600
-    msg: "Rebooting before SSMS installation due to pending reboot"
   when: ssms_reboot_pending.output[0] | default(false) | bool
+  block:
+    - name: Record pre-reboot boot time baseline
+      ansible.windows.win_powershell:
+        script: |
+          (Get-CimInstance -ClassName Win32_OperatingSystem -Property LastBootUpTime).LastBootUpTime.ToFileTime()
+      register: ssms_reboot_baseline
+
+    - name: Reboot before SSMS install
+      ansible.windows.win_reboot:
+        reboot_timeout: 600
+        msg: "Rebooting before SSMS installation due to pending reboot"
+  rescue:
+    # Over aws_ssm the boot-time check can hang on a stale session even though
+    # the host is back; wait for SSM, then confirm the reboot happened.
+    - name: Wait for SSM to reconnect after reboot
+      ansible.builtin.wait_for_connection:
+        delay: 10
+        timeout: 900
+
+    - name: Verify reboot completed (aws_ssm reconnect timeout is expected)
+      ansible.windows.win_powershell:
+        script: |
+          $current = (Get-CimInstance -ClassName Win32_OperatingSystem -Property LastBootUpTime).LastBootUpTime.ToFileTime()
+          if ($current -le {{ ssms_reboot_baseline.output[0] }}) { throw "host has not rebooted yet" }
+      register: ssms_reboot_verify
+      until: ssms_reboot_verify is succeeded
+      retries: 30
+      delay: 10
 
 - name: Check SQL Server Manager Studio installer exists
   ansible.windows.win_stat:
