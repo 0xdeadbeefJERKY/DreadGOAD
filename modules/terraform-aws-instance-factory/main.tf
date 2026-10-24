@@ -38,7 +38,9 @@ resource "aws_instance" "this" {
   monitoring                  = var.enable_monitoring
   user_data                   = var.user_data != "" ? var.user_data : null
   user_data_replace_on_change = true
-  associate_public_ip_address = var.assign_public_ip && !var.enable_ssm
+  # With an EIP attached AWS reports this as true; leave it unmanaged so the
+  # drift doesn't force a replacement.
+  associate_public_ip_address = var.create_eip ? null : var.assign_public_ip && !var.enable_ssm
   source_dest_check           = var.source_dest_check
 
   root_block_device {

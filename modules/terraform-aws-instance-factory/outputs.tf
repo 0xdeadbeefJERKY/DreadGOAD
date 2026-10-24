@@ -184,3 +184,8 @@ output "windows_password_data" {
   value       = local.is_windows && !local.create_asg ? aws_instance.this[*].password_data : []
   sensitive   = true
 }
+
+output "eip_public_ip" {
+  description = "Elastic IP attached to the instance (null when create_eip is false)"
+  value       = one(aws_eip.this[*].public_ip)
+}

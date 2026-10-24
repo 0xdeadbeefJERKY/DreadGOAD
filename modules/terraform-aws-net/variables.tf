@@ -14,6 +14,18 @@ variable "env" {
   type        = string
 }
 
+variable "enable_flow_logs" {
+  description = "Whether to capture VPC Flow Logs (all traffic) to CloudWatch Logs"
+  type        = bool
+  default     = false
+}
+
+variable "flow_logs_retention_days" {
+  description = "Retention in days for the VPC Flow Logs log group"
+  type        = number
+  default     = 14
+}
+
 variable "kubernetes_tags" {
   description = "Configuration for Kubernetes integration tags"
   type = object({

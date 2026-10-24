@@ -174,6 +174,12 @@ variable "create_alb" {
   default     = false
 }
 
+variable "create_eip" {
+  description = "Whether to attach an Elastic IP to the instance (single-instance mode only). Works with enable_ssm, unlike assign_public_ip."
+  type        = bool
+  default     = false
+}
+
 variable "create_nlb" {
   description = "Whether to create a Network Load Balancer"
   type        = bool
