@@ -1,6 +1,6 @@
 output "nat_eip" {
-  value       = aws_eip.nat.public_ip
-  description = "The public IP of the NAT gateway"
+  value       = one(aws_eip.nat[*].public_ip)
+  description = "The public IP of the NAT gateway (null when enable_nat_gateway is false)"
 }
 
 output "public_subnet_ids" {

@@ -14,6 +14,12 @@ variable "env" {
   type        = string
 }
 
+variable "enable_nat_gateway" {
+  description = "Create a managed NAT gateway and the private default route. Disable when a NAT instance unit provides egress instead."
+  type        = bool
+  default     = true
+}
+
 variable "enable_flow_logs" {
   description = "Whether to capture VPC Flow Logs (all traffic) to CloudWatch Logs"
   type        = bool
