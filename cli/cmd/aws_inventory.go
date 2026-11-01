@@ -134,6 +134,12 @@ func removeInventoryAllVars(content string, keys map[string]bool) (string, int) 
 }
 
 func usesAWSWindowsShell(line string) bool {
+	// Linux hosts on the same SSM transport (e.g. a Wazuh server) opt out by
+	// declaring a POSIX shell; forcing PowerShell onto them would break them.
+	switch strings.ToLower(inventoryHostVariable(line, "ansible_shell_type")) {
+	case "sh", "bash", "csh", "fish":
+		return false
+	}
 	connection := strings.ToLower(inventoryHostVariable(line, "ansible_connection"))
 	return connection == "" || strings.Contains(connection, "aws_ssm") ||
 		strings.Contains(connection, "winrm") || strings.Contains(connection, "psrp")
