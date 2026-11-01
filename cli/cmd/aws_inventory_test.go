@@ -108,6 +108,29 @@ func TestEnsureAWSInventoryTransportAddsMissingSectionAndAutomaticBucket(t *test
 	}
 }
 
+func TestEnsureAWSInventoryTransportLeavesPOSIXShellHostsAlone(t *testing.T) {
+	cfg := &config.Config{
+		Env: "range", ProjectRoot: t.TempDir(), Provider: "aws", Region: "us-east-1",
+	}
+	wazuh := "wazuh ansible_host=i-0fedcba9876543210 ansible_shell_type=sh " +
+		"ansible_become=true ansible_python_interpreter=/usr/bin/python3"
+	body := "[default]\n" +
+		"dc01 ansible_host=i-0123456789abcdef0 dict_key=dc01\n" +
+		wazuh + "\n"
+	writeInventoryTestFile(t, cfg.InventoryPath(), body, 0o644)
+
+	if err := ensureAWSInventoryTransport(cfg); err != nil {
+		t.Fatal(err)
+	}
+	got := readInventoryForTest(t, cfg.InventoryPath())
+	if !strings.Contains(got, wazuh+"\n") {
+		t.Errorf("POSIX-shell host was rewritten:\n%s", got)
+	}
+	if value := hostVariableForTest(t, got, "dc01", "ansible_shell_type"); value != "powershell" {
+		t.Errorf("dc01 ansible_shell_type = %q, want powershell", value)
+	}
+}
+
 func TestEnsureAWSInventoryTransportDoesNotTouchNonAWSInventory(t *testing.T) {
 	cfg := &config.Config{
 		Env: "range", ProjectRoot: t.TempDir(), Provider: "azure", Region: "centralus",

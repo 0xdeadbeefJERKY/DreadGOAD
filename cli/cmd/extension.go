@@ -12,6 +12,7 @@ import (
 
 	"github.com/dreadnode/dreadgoad/internal/ansible"
 	"github.com/dreadnode/dreadgoad/internal/config"
+	inv "github.com/dreadnode/dreadgoad/internal/inventory"
 	"github.com/spf13/cobra"
 )
 
@@ -198,6 +199,27 @@ func runExtensionProvisionAll(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// extensionInventories returns the extension's template inventory unless the
+// runtime inventory already defines every machine the extension declares, as
+// on AWS where the host comes from Terragrunt and connects over SSM. Passed as
+// a later -i, the template would override those connection details with its
+// {{ip_range}}/SSH defaults.
+func extensionInventories(runtimePath, templatePath string, machines []string) []string {
+	if len(machines) == 0 {
+		return []string{templatePath}
+	}
+	parsed, err := inv.Parse(runtimePath)
+	if err != nil {
+		return []string{templatePath}
+	}
+	for _, machine := range machines {
+		if parsed.HostByName(machine) == nil {
+			return []string{templatePath}
+		}
+	}
+	return nil
+}
+
 func provisionExtension(cfg *config.Config, name string, ext config.ExtensionConfig, limit string, retry retryOverrides) error {
 	ctx := context.Background()
 
@@ -205,7 +227,13 @@ func provisionExtension(cfg *config.Config, name string, ext config.ExtensionCon
 	logFile := filepath.Join(cfg.LogDir, fmt.Sprintf("%s-ext-%s-%s.log",
 		cfg.Env, name, time.Now().Format("20060102_150405")))
 
-	extInvPath := cfg.ExtensionInventoryTemplate(name)
+	// Extension playbooks use roles from the installed dreadnode.goad
+	// collection; rebuild it so role edits apply without a full provision.
+	if err := ansible.BuildCollection(cfg.ProjectRoot); err != nil {
+		return fmt.Errorf("collection build failed: %w", err)
+	}
+
+	extInventories := extensionInventories(cfg.InventoryPath(), cfg.ExtensionInventoryTemplate(name), ext.Machines)
 
 	extraVars := make(map[string]string)
 	if ext.DataDir != "" {
@@ -240,7 +268,7 @@ func provisionExtension(cfg *config.Config, name string, ext config.ExtensionCon
 	opts := ansible.RetryOptions{
 		Playbook:    ext.Playbook,
 		Env:         cfg.Env,
-		Inventories: []string{extInvPath},
+		Inventories: extInventories,
 		ExtraVars:   extraVars,
 		Limit:       limit,
 		Debug:       cfg.Debug,

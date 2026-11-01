@@ -12,7 +12,9 @@
   roles:
     - { role: 'dreadnode.goad.wazuh_agent', tags: 'wazuh_agent' }
   vars:
-    wazuh_manager_host: "{{ hostvars['wazuh']['ansible_host'] }}"
+    # On SSM-managed ranges ansible_host is an instance ID; set
+    # wazuh_manager_address on the wazuh host to give agents a routable IP.
+    wazuh_manager_host: "{{ hostvars['wazuh']['wazuh_manager_address'] | default(hostvars['wazuh']['ansible_host']) }}"
 
 - name: Install Wazuh Agent on Linux
   hosts: wazuh_agents_linux
@@ -20,4 +22,6 @@
   roles:
     - { role: 'dreadnode.goad.wazuh_agent_linux', tags: 'wazuh_agent_linux' }
   vars:
-    wazuh_manager_host: "{{ hostvars['wazuh']['ansible_host'] }}"
+    # On SSM-managed ranges ansible_host is an instance ID; set
+    # wazuh_manager_address on the wazuh host to give agents a routable IP.
+    wazuh_manager_host: "{{ hostvars['wazuh']['wazuh_manager_address'] | default(hostvars['wazuh']['ansible_host']) }}"
